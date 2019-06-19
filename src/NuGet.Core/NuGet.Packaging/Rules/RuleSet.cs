@@ -27,7 +27,6 @@ namespace NuGet.Packaging.Rules
                 new PathTooLongRule(AnalysisResources.FilePathTooLongWarning),
                 new UnrecognizedLicenseIdentifierRule(AnalysisResources.UnrecognizedLicenseIdentifier),
                 new LicenseUrlDeprecationWarning(AnalysisResources.LicenseUrlDeprecationWarning),
-                new IconCanOpenRule(AnalysisResources.IconCannotOpenFile),
                 new IconMaxFilesizeRule(AnalysisResources.IconMaxFilsesizeExceeded),
             }
         );
