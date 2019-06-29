@@ -19,10 +19,10 @@ namespace NuGet.Protocol.Plugins.Tests
             Assert.Equal("startInfo", exception.ParamName);
         }
 
-        [Fact]
+        [PlatformFact(Platform.Windows)]
         public void Exited_WhenProcessExits_Fires()
         {
-            ProcessStartInfo startInfo = CreateCrossPlatformStartInfo();
+            ProcessStartInfo startInfo = CreateProcessStartInfo();
 
             using (var exitedEvent = new ManualResetEventSlim(initialState: false))
             using (var pluginProcess = new PluginProcess(startInfo))
@@ -56,7 +56,7 @@ namespace NuGet.Protocol.Plugins.Tests
             TestWithRunningProcess((process, pluginProcess) => Assert.Null(pluginProcess.ExitCode));
         }
 
-        [Fact]
+        [PlatformFact(Platform.Windows)]
         public void ExitCode_WithExitedProcess_IsNotNull()
         {
             TestWithExitedProcess(pluginProcess => Assert.NotNull(pluginProcess.ExitCode));
@@ -74,7 +74,7 @@ namespace NuGet.Protocol.Plugins.Tests
             TestWithRunningProcess((process, pluginProcess) => Assert.Equal(process.MainModule.FileName, pluginProcess.FilePath));
         }
 
-        [Fact]
+        [PlatformFact(Platform.Windows)]
         public void FilePath_WithExitedProcess_Throws()
         {
             TestWithExitedProcess(pluginProcess => Assert.ThrowsAny<Exception>(() => pluginProcess.FilePath));
@@ -92,7 +92,7 @@ namespace NuGet.Protocol.Plugins.Tests
             TestWithRunningProcess((process, pluginProcess) => Assert.Equal(process.Id, pluginProcess.Id));
         }
 
-        [Fact]
+        [PlatformFact(Platform.Windows)]
         public void Id_WithExitedProcess_IsNotNull()
         {
             TestWithExitedProcess(pluginProcess => Assert.NotNull(pluginProcess.Id));
@@ -127,7 +127,7 @@ namespace NuGet.Protocol.Plugins.Tests
             }
         }
 
-        private static ProcessStartInfo CreateCrossPlatformStartInfo()
+        private static ProcessStartInfo CreateProcessStartInfo()
         {
             return new ProcessStartInfo("find")
             {
@@ -156,7 +156,7 @@ namespace NuGet.Protocol.Plugins.Tests
 
         private static void TestWithExitedProcess(Action<PluginProcess> verify)
         {
-            ProcessStartInfo startInfo = CreateCrossPlatformStartInfo();
+            ProcessStartInfo startInfo = CreateProcessStartInfo();
 
             using (var pluginProcess = new PluginProcess(startInfo))
             {
