@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -19,6 +20,7 @@ using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto.Parameters;
 using Test.Utility.Signing;
 using Xunit;
+using Xunit.Abstractions;
 using BcAccuracy = Org.BouncyCastle.Asn1.Tsp.Accuracy;
 using DotNetUtilities = Org.BouncyCastle.Security.DotNetUtilities;
 
@@ -34,8 +36,9 @@ namespace NuGet.Packaging.FuncTest
         private readonly TrustedTestCert<TestCertificate> _trustedTestCert;
         private readonly TestCertificate _untrustedTestCertificate;
         private readonly IList<ISignatureVerificationProvider> _trustProviders;
+        private readonly ITestOutputHelper _helper;
 
-        public SignatureTrustAndValidityVerificationProviderTests(SigningTestFixture fixture)
+        public SignatureTrustAndValidityVerificationProviderTests(SigningTestFixture fixture, ITestOutputHelper helper)
         {
             _testFixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
             _trustedTestCert = _testFixture.TrustedTestCertificate;
@@ -44,6 +47,8 @@ namespace NuGet.Packaging.FuncTest
             {
                 new SignatureTrustAndValidityVerificationProvider()
             };
+
+            _helper = helper;
         }
 
         [CIOnlyFact]
@@ -490,25 +495,58 @@ namespace NuGet.Packaging.FuncTest
                 repositoryCountersignatureVerificationBehavior: SignatureVerificationBehavior.IfExistsAndIsNecessary,
                 revocationMode: RevocationMode.Online);
 
+            var stopwatch = Stopwatch.StartNew();
+
             using (var dir = TestDirectory.Create())
             using (var trustedCertificate = _testFixture.TrustedTestCertificateWillExpireIn10Seconds)
             using (var willExpireCert = new X509Certificate2(trustedCertificate.Source.Cert))
             using (var repoTestCertificate = new X509Certificate2(_trustedTestCert.Source.Cert))
             {
+                _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:  NotBefore:  {willExpireCert.NotBefore.ToString("O")}.  NotAfter:  {willExpireCert.NotAfter.ToString("O")}");
+
+                _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:  author signing");
+
                 var signedPackagePath = await SignedArchiveTestUtility.AuthorSignPackageAsync(
                     willExpireCert,
                     nupkg,
                     dir);
 
+                _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:  repo signing");
+
                 var countersignedPackagePath = await SignedArchiveTestUtility.RepositorySignPackageAsync(repoTestCertificate, signedPackagePath, dir, new Uri("https://v3serviceIndex.test/api/index.json"), timestampService.Url);
 
+                _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:  waiting for expiration");
+
                 await SignatureTestUtility.WaitForCertificateExpirationAsync(willExpireCert);
+
+                _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:  waited");
 
                 var verifier = new PackageSignatureVerifier(_trustProviders);
                 using (var packageReader = new PackageArchiveReader(countersignedPackagePath))
                 {
+                    _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:  verifying");
+
                     // Act
                     var result = await verifier.VerifySignaturesAsync(packageReader, settings, CancellationToken.None);
+
+                    _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:  verified");
+
+                    foreach (var r in result.Results)
+                    {
+                        _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:  Trust:  {r.Trust}");
+
+                        foreach (var issue in r.Issues)
+                        {
+                            _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:    Code:  {issue.Code}");
+                            _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:    Level:  {issue.Level}");
+                            _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:    LibraryId:  {issue.LibraryId}");
+                            _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:    Message:  {issue.Message}");
+                            _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:    ProjectPath:  {issue.ProjectPath}");
+                            _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:    Time:  {issue.Time}");
+                            _helper.WriteLine($"[{DateTime.Now.ToString("O")} ({stopwatch.Elapsed})]:    WarningLevel:  {issue.WarningLevel}");
+                        }
+                    }
+
                     var resultsWithErrors = result.Results.Where(r => r.GetErrorIssues().Any());
 
                     // Assert
