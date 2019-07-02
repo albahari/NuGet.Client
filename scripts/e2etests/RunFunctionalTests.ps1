@@ -80,6 +80,11 @@ RealTimeLogResults $NuGetTestPath $EachTestTimoutInSecs
 
 KillRunningInstancesOfVS
 
+$logFile = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($Env:ACTIVITYLOGFULLPATH), "FullLog_$($Env:BUILD_BUILDNUMBER).txt")
 
+If ([System.IO.File]::Exists($logFile))
+{
+    Write-Host "##vso[task.uploadfile]$logFile"
+}
 
 Write-Host -ForegroundColor Cyan "THE END!"
