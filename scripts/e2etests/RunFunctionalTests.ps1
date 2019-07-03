@@ -82,6 +82,8 @@ KillRunningInstancesOfVS
 
 $logFile = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($Env:ACTIVITYLOGFULLPATH), "FullLog_$($Env:BUILD_BUILDNUMBER).txt")
 
+Write-Host "Log file at $logFile exists:  $([System.IO.File]::Exists($logFile))"
+
 If ([System.IO.File]::Exists($logFile))
 {
     Write-Host "##vso[task.uploadfile]$logFile"
