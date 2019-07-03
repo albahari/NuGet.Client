@@ -89,4 +89,17 @@ If ([System.IO.File]::Exists($logFile))
     Write-Host "##vso[task.uploadfile]$logFile"
 }
 
+$filePaths = [System.IO.Directory]::GetFiles($NuGetTestPath, "*.*", [System.IO.SearchOption]::AllDirectories)
+
+ForEach ($filePath In $filePaths)
+{
+    $extension = [System.IO.Path]::GetExtension($filePath)
+
+    If ([string]::Equals(".txt", $extension, [System.StringComparison]::OrdinalIgnoreCase) -Or [string]::Equals(".txt", $extension, [System.StringComparison]::OrdinalIgnoreCase))
+    {
+        Write-Host "Found $filePath"
+        Write-Host "##vso[task.uploadfile]$filePath"
+    }
+}
+
 Write-Host -ForegroundColor Cyan "THE END!"
